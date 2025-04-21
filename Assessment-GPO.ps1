@@ -6,7 +6,7 @@
     then generates a detailed HTML report.
 .NOTES
     File Name      : GPO-Assessment.ps1
-    Author         : Your Name
+    Author         : André Martins
     Prerequisite   : PowerShell 5.1 or later, Active Directory module, Group Policy module
 #>
 
