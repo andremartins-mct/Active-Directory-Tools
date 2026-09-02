@@ -1,0 +1,210 @@
+<!DOCTYPE html><html lang="en-US"><head><meta charset="UTF-8">
+<title>nav preview</title><style>
+  :root{
+    --ink:#10151c; --slate:#3d4956; --muted:#5a6672;
+    --paper:#f5f6f8; --surface:#ffffff; --line:#e4e8ed; --line-strong:#c7d0d9;
+    --accent:#1d5570; --accent-soft:#eaf1f5;
+    --crit:#a81f26; --crit-soft:#fbeaea;
+    --warn:#7d5107; --warn-soft:#fbf1de;
+    --ok:#1f6340;   --ok-soft:#e7f2ec;
+    --info:#414e60; --info-soft:#eef1f4;
+    --unknown:#5a6672; --unknown-soft:#eceff2;
+    --mono:"Cascadia Code","Cascadia Mono",Consolas,ui-monospace,monospace;
+    --sans:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ink:#e8ecf1; --slate:#c2ccd6; --muted:#9aa7b4;
+      --paper:#12161b; --surface:#1a1f26; --line:#2b323b; --line-strong:#3d4650;
+      --accent:#7fb8d4; --accent-soft:#1e2b34;
+      --crit:#f0868c; --crit-soft:#3a1f21;
+      --warn:#e3b567; --warn-soft:#382d19;
+      --ok:#79c9a1;   --ok-soft:#182c22;
+      --info:#a9b6c4; --info-soft:#222831;
+      --unknown:#9aa7b4; --unknown-soft:#232931;
+    }
+    thead th{background:#232a33 !important}
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--sans);font-size:13px;line-height:1.5;color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased}
+  code.mono,.mono{font-family:var(--mono);font-size:.82em;color:var(--slate);word-break:break-all}
+  .muted-txt{color:var(--muted)}
+  a{color:var(--accent)}
+  a:focus-visible,summary:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+  .masthead{background:var(--ink);color:#fff;padding:30px 40px 24px}
+  @media (prefers-color-scheme: dark){.masthead{background:#0b0e12}}
+  .masthead .kicker{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#93a3b2;font-weight:600}
+  .masthead h1{font-size:26px;font-weight:700;letter-spacing:-.01em;margin-top:8px;color:#fff}
+  .masthead .meta{margin-top:15px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:5px 26px;font-size:12px;color:#c9d3dc}
+  .masthead .meta b{color:#fff;font-weight:600}
+
+  .posture{display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px;padding:14px 40px;background:var(--surface);border-bottom:1px solid var(--line)}
+  .verdict{display:flex;align-items:center;gap:10px;font-weight:700;font-size:14px}
+  .verdict .dot{width:11px;height:11px;border-radius:50%;flex:none}
+  .verdict.sev-crit{color:var(--crit)} .verdict.sev-crit .dot{background:var(--crit)}
+  .verdict.sev-warn{color:var(--warn)} .verdict.sev-warn .dot{background:var(--warn)}
+  .verdict.sev-ok{color:var(--ok)}     .verdict.sev-ok .dot{background:var(--ok)}
+  .legend{display:flex;gap:15px;margin-left:auto;font-size:11.5px;color:var(--muted)}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .lg-risk{background:var(--crit)} .lg-hyg{background:var(--warn)} .lg-info{background:var(--line-strong)}
+
+  /* Navigation chips: same severity language as the tiles, at roughly a third of the height.
+     The count badge carries the colour so the strip can be scanned without reading labels. */
+  .nav{position:sticky;top:0;z-index:30;background:var(--surface);border-bottom:1px solid var(--line);padding:7px 40px;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+  .navchip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;line-height:1;letter-spacing:.01em;text-decoration:none;color:var(--slate);background:var(--surface);border:1px solid var(--line);border-left-width:3px;border-left-color:var(--line-strong);border-radius:6px;padding:4px 6px 4px 5px;transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease,color .12s ease}
+  .navchip .lbl{white-space:nowrap;font-weight:500}
+  .navchip .cnt{font-family:var(--mono);font-size:9.5px;font-weight:700;min-width:16px;height:14px;padding:0 4px;display:inline-flex;align-items:center;justify-content:center;border-radius:7px;background:var(--info-soft);color:var(--info);font-variant-numeric:tabular-nums}
+  .navchip:hover{transform:translateY(-1px);box-shadow:0 2px 7px rgba(16,21,28,.14)}
+  .navchip.sev-crit{border-left-color:var(--crit)}
+  .navchip.sev-crit .cnt{background:var(--crit);color:#fff}
+  .navchip.sev-crit:hover{border-color:var(--crit);color:var(--crit)}
+  .navchip.sev-warn{border-left-color:var(--warn)}
+  .navchip.sev-warn .cnt{background:var(--warn);color:#fff}
+  .navchip.sev-warn:hover{border-color:var(--warn);color:var(--warn)}
+  .navchip.sev-ok{border-left-color:var(--ok)}
+  .navchip.sev-ok .cnt{background:var(--ok-soft);color:var(--ok)}
+  .navchip.sev-ok:hover{border-color:var(--ok);color:var(--ok)}
+  .navchip.sev-info{border-left-color:var(--line-strong)}
+  .navchip.sev-unknown{border-left-color:var(--unknown);border-style:dashed;border-left-style:solid}
+  .navchip.sev-unknown .cnt{background:var(--unknown-soft);color:var(--unknown)}
+  .navchip.sev-unknown:hover{border-color:var(--unknown);color:var(--unknown)}
+  .navchip.plain{border-left-color:var(--accent);color:var(--accent);font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.06em;padding:5px 8px}
+  .navchip.plain:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .nav .spacer{margin-left:auto;display:flex;gap:5px}
+  @media (prefers-color-scheme: dark){
+    .navchip.sev-crit .cnt,.navchip.sev-warn .cnt{color:#12161b}
+    .navchip:hover{box-shadow:0 2px 7px rgba(0,0,0,.5)}
+  }
+
+  /* The navigation strip is sticky, so anchors need clearance or the heading lands under it. */
+  .finding,#summary,#plan{scroll-margin-top:78px}
+  .finding:target{border-color:var(--accent)}
+  .btn{font-size:11px;font-family:inherit;color:var(--slate);background:var(--surface);border:1px solid var(--line-strong);border-radius:5px;padding:4px 10px;cursor:pointer}
+  .btn:hover{color:var(--accent);border-color:var(--accent)}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 40px 20px}
+  .block-title{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:6px 0 13px}
+
+  .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:11px;margin-bottom:14px}
+  .tile{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:14px 15px 13px}
+  .tile::before{content:"";position:absolute;left:0;top:13px;bottom:13px;width:3px;border-radius:3px;background:var(--line-strong)}
+  .tile.sev-crit::before{background:var(--crit)} .tile.sev-warn::before{background:var(--warn)}
+  .tile.sev-ok::before{background:var(--ok)}     .tile.sev-info::before{background:var(--line-strong)}
+  .tile.sev-unknown::before{background:var(--unknown)}
+  .tile .num{font-size:27px;font-weight:700;line-height:1;padding-left:11px;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .tile.sev-crit .num{color:var(--crit)} .tile.sev-warn .num{color:var(--warn)} .tile.sev-ok .num{color:var(--ok)}
+  .tile.sev-unknown .num{color:var(--unknown)}
+  .tile .lbl{font-size:11.5px;color:var(--muted);margin-top:7px;padding-left:11px;line-height:1.35}
+
+  .note{font-size:12px;color:var(--muted);border-left:2px solid var(--line-strong);padding-left:11px;margin-top:6px}
+
+  .plan{background:var(--surface);border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:22px}
+  .plan table{width:100%;border-collapse:collapse;font-size:12.5px}
+  .plan td,.plan th{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+  .plan tbody tr:last-child td{border-bottom:none}
+  .plan .r{font-family:var(--mono);font-weight:700;color:var(--muted);white-space:nowrap}
+
+  .finding{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--line-strong);border-radius:9px;margin-bottom:14px;overflow:hidden}
+  .finding.sev-crit{border-left-color:var(--crit)} .finding.sev-warn{border-left-color:var(--warn)}
+  .finding.sev-ok{border-left-color:var(--ok)}     .finding.sev-info{border-left-color:var(--line-strong)}
+  .finding.sev-unknown{border-left-color:var(--unknown)}
+  .finding>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 20px;user-select:none}
+  .finding>summary::-webkit-details-marker{display:none}
+  .finding>summary::after{content:"";margin-left:auto;width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .2s;flex:none}
+  .finding[open]>summary::after{transform:rotate(-135deg)}
+  .finding .ref{font-family:var(--mono);font-size:11px;color:var(--muted);font-weight:700;min-width:32px}
+  .finding h2{font-size:15px;font-weight:600;flex:1}
+  .finding .body{padding:0 20px 20px;border-top:1px solid var(--line)}
+  .desc{font-size:12.5px;color:var(--slate);margin:14px 0;padding-left:12px;border-left:2px solid var(--accent-soft)}
+  .desc .tag-obs,.desc .tag-rem{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin-right:6px}
+  .desc p+p{margin-top:8px}
+  .srcref{font-size:11.5px;color:var(--muted);margin:0 0 12px 12px}
+
+  .chip{font-size:11px;font-weight:600;padding:3px 11px;border-radius:20px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .chip-crit{background:var(--crit-soft);color:var(--crit)}
+  .chip-warn{background:var(--warn-soft);color:var(--warn)}
+  .chip-ok{background:var(--ok-soft);color:var(--ok)}
+  .chip-info{background:var(--info-soft);color:var(--info)}
+  .chip-unknown{background:var(--unknown-soft);color:var(--unknown)}
+
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px}
+  .toolbar input{font-family:inherit;font-size:12px;color:var(--ink);background:var(--surface);border:1px solid var(--line-strong);border-radius:6px;padding:5px 10px;min-width:230px}
+  .toolbar .rowcount{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+  .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  caption{text-align:left;font-size:11px;color:var(--muted);padding:0 0 6px}
+  thead th{background:#eef1f4;color:var(--slate);text-align:left;font-weight:600;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;padding:9px 13px;border-bottom:1px solid var(--line-strong);white-space:nowrap}
+  table.sortable thead th{cursor:pointer}
+  table.sortable thead th::after{content:"";display:inline-block;width:0;height:0;margin-left:6px;vertical-align:middle;border-left:4px solid transparent;border-right:4px solid transparent;border-top:4px solid var(--line-strong)}
+  table.sortable thead th.asc::after{border-top:none;border-bottom:4px solid var(--accent)}
+  table.sortable thead th.desc::after{border-top:4px solid var(--accent)}
+  tbody td{padding:9px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:var(--accent-soft)}
+
+  .ok-note{font-size:12.5px;color:var(--ok);background:var(--ok-soft);border:1px solid var(--ok);border-radius:7px;padding:11px 14px;display:flex;gap:9px;align-items:center}
+  .ok-note::before{content:"\2713";font-weight:700}
+  .unknown-note{font-size:12.5px;color:var(--unknown);background:var(--unknown-soft);border:1px solid var(--line-strong);border-radius:7px;padding:11px 14px}
+
+  .foot{border-top:1px solid var(--line);padding:20px 40px;font-size:11.5px;color:var(--muted);text-align:center;line-height:1.7}
+  .foot strong{color:var(--slate)}
+
+  @media (max-width:640px){
+    .masthead,.posture,.nav,.wrap,.foot{padding-left:18px;padding-right:18px}
+    .masthead h1{font-size:21px} .legend{margin-left:0}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+  @page{size:A4;margin:14mm}
+  @media print{
+    body{background:#fff;color:#000;font-size:10.5px}
+    .nav,.toolbar,.btn{display:none!important}
+    .masthead{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .tile,.chip,thead th,.finding,.plan{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .finding{break-inside:avoid;box-shadow:none}
+    .finding>summary::after{display:none}
+    .finding .body{display:block!important}
+    tr{break-inside:avoid}
+  }
+
+body{padding:0;background:var(--paper)}
+.demo{padding:24px 40px;font-size:12px;color:var(--muted)}
+</style></head><body>
+<div class="nav">
+<a class="navchip plain" href="#summary">Summary</a>
+<a class="navchip plain" href="#plan">Plan</a>
+<a class='navchip sev-crit' href='#ms16072' title='R1 - GPOs without a read permission usable by the computer account (MS16-072)'><span class='lbl'>MS16-072</span><span class='cnt'>1</span></a>
+<a class='navchip sev-crit' href='#cpassword' title='R2 - Credentials stored in Group Policy Preferences (MS14-025)'><span class='lbl'>cpassword</span><span class='cnt'>1</span></a>
+<a class='navchip sev-crit' href='#delegation' title='R3 - Write delegation held by non-default principals'><span class='lbl'>Delegation</span><span class='cnt'>1</span></a>
+<a class='navchip sev-crit' href='#sids' title='R4 - Unresolved SIDs in the delegation of a GPO'><span class='lbl'>Unresolved SIDs</span><span class='cnt'>1</span></a>
+<a class='navchip sev-crit' href='#orphan-gpc' title='R5 - Orphaned Group Policy Container (no template in SYSVOL)'><span class='lbl'>Orphan GPC</span><span class='cnt'>1</span></a>
+<a class='navchip sev-crit' href='#orphan-gpt' title='R6 - Orphaned Group Policy Template (no container in Active Directory)'><span class='lbl'>Orphan GPT</span><span class='cnt'>1</span></a>
+<a class='navchip sev-crit' href='#version' title='R7 - Version mismatch between Active Directory and SYSVOL'><span class='lbl'>Versions</span><span class='cnt'>1</span></a>
+<a class='navchip sev-crit' href='#crossdomain' title='R8 - Links that cross a domain boundary'><span class='lbl'>Cross-domain</span><span class='cnt'>1</span></a>
+<a class='navchip sev-ok' href='#noapply' title='R9 - Enabled links on GPOs that no principal can apply'><span class='lbl'>No apply target</span><span class='cnt'>0</span></a>
+<a class='navchip sev-warn' href='#empty' title='H1 - GPOs with no configured settings'><span class='lbl'>Empty</span><span class='cnt'>1</span></a>
+<a class='navchip sev-ok' href='#unlinked' title='H2 - GPOs with settings but no link'><span class='lbl'>Unlinked</span><span class='cnt'>0</span></a>
+<a class='navchip sev-warn' href='#useronly' title='H3 - User Configuration only, with the Computer node still enabled'><span class='lbl'>User only</span><span class='cnt'>1</span></a>
+<a class='navchip sev-warn' href='#componly' title='H4 - Computer Configuration only, with the User node still enabled'><span class='lbl'>Computer only</span><span class='cnt'>2</span></a>
+<a class='navchip sev-warn' href='#alldisabled' title='H5 - GPOs with GPO Status set to All Settings Disabled'><span class='lbl'>All disabled</span><span class='cnt'>1</span></a>
+<a class='navchip sev-warn' href='#enforced' title='H6 - Links configured as Enforced'><span class='lbl'>Enforced</span><span class='cnt'>1</span></a>
+<a class='navchip sev-warn' href='#blockinherit' title='H7 - Containers with inheritance blocked'><span class='lbl'>Block inherit</span><span class='cnt'>1</span></a>
+<a class='navchip sev-warn' href='#stale' title='H8 - GPOs not modified in more than 730 days'><span class='lbl'>Stale</span><span class='cnt'>2</span></a>
+<a class='navchip sev-warn' href='#defaultgpo' title='H9 - Default GPOs configured beyond their recommended scope'><span class='lbl'>Default GPOs</span><span class='cnt'>1</span></a>
+<a class='navchip sev-warn' href='#loopback' title='H10 - GPOs enabling user Group Policy loopback processing'><span class='lbl'>Loopback</span><span class='cnt'>1</span></a>
+<a class='navchip sev-info' href='#links' title='I1 - Link map'><span class='lbl'>Link map</span><span class='cnt'>4</span></a>
+<a class='navchip sev-info' href='#wmi' title='I2 - GPOs with a WMI filter'><span class='lbl'>WMI filters</span><span class='cnt'>1</span></a>
+<a class='navchip sev-info' href='#disabled-links' title='I3 - Links with Link Enabled set to No'><span class='lbl'>Disabled links</span><span class='cnt'>1</span></a>
+<a class='navchip sev-unknown' href='#gpco' title='I4 - Members of Group Policy Creator Owners'><span class='lbl'>GPCO</span><span class='cnt'>?</span></a>
+<a class='navchip sev-info' href='#largegpt' title='I5 - Group Policy Templates larger than 25 MB'><span class='lbl'>Large templates</span><span class='cnt'>1</span></a>
+<a class="navchip sev-warn" href="#collection" title="C0 - Collection completeness"><span class="lbl">Collection</span><span class="cnt">1</span></a>
+<div class="spacer">
+  <button type="button" class="btn" id="expand-all">Expand all</button>
+  <button type="button" class="btn" id="collapse-all">Collapse all</button>
+</div>
+</div>
+<div class="demo">Preview of the navigation strip only. Hover a chip to see the reference and full title.</div>
+</body></html>

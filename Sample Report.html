@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GPO Assessment - contoso.com</title>
+<style>
+  :root{
+    --ink:#10151c; --slate:#3d4956; --muted:#5a6672;
+    --paper:#f5f6f8; --surface:#ffffff; --line:#e4e8ed; --line-strong:#c7d0d9;
+    --accent:#1d5570; --accent-soft:#eaf1f5;
+    --crit:#a81f26; --crit-soft:#fbeaea;
+    --warn:#7d5107; --warn-soft:#fbf1de;
+    --ok:#1f6340;   --ok-soft:#e7f2ec;
+    --info:#414e60; --info-soft:#eef1f4;
+    --unknown:#5a6672; --unknown-soft:#eceff2;
+    --mono:"Cascadia Code","Cascadia Mono",Consolas,ui-monospace,monospace;
+    --sans:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ink:#e8ecf1; --slate:#c2ccd6; --muted:#9aa7b4;
+      --paper:#12161b; --surface:#1a1f26; --line:#2b323b; --line-strong:#3d4650;
+      --accent:#7fb8d4; --accent-soft:#1e2b34;
+      --crit:#f0868c; --crit-soft:#3a1f21;
+      --warn:#e3b567; --warn-soft:#382d19;
+      --ok:#79c9a1;   --ok-soft:#182c22;
+      --info:#a9b6c4; --info-soft:#222831;
+      --unknown:#9aa7b4; --unknown-soft:#232931;
+    }
+    thead th{background:#232a33 !important}
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--sans);font-size:13px;line-height:1.5;color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased}
+  code.mono,.mono{font-family:var(--mono);font-size:.82em;color:var(--slate);word-break:break-all}
+  .muted-txt{color:var(--muted)}
+  a{color:var(--accent)}
+  a:focus-visible,summary:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+  .masthead{background:var(--ink);color:#fff;padding:30px 40px 24px}
+  @media (prefers-color-scheme: dark){.masthead{background:#0b0e12}}
+  .masthead .kicker{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#93a3b2;font-weight:600}
+  .masthead h1{font-size:26px;font-weight:700;letter-spacing:-.01em;margin-top:8px;color:#fff}
+  .masthead .meta{margin-top:15px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:5px 26px;font-size:12px;color:#c9d3dc}
+  .masthead .meta b{color:#fff;font-weight:600}
+
+  .posture{display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px;padding:14px 40px;background:var(--surface);border-bottom:1px solid var(--line)}
+  .verdict{display:flex;align-items:center;gap:10px;font-weight:700;font-size:14px}
+  .verdict .dot{width:11px;height:11px;border-radius:50%;flex:none}
+  .verdict.sev-crit{color:var(--crit)} .verdict.sev-crit .dot{background:var(--crit)}
+  .verdict.sev-warn{color:var(--warn)} .verdict.sev-warn .dot{background:var(--warn)}
+  .verdict.sev-ok{color:var(--ok)}     .verdict.sev-ok .dot{background:var(--ok)}
+  .legend{display:flex;gap:15px;margin-left:auto;font-size:11.5px;color:var(--muted)}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .lg-risk{background:var(--crit)} .lg-hyg{background:var(--warn)} .lg-info{background:var(--line-strong)}
+
+  /* Navigation chips: same severity language as the tiles, at roughly a third of the height.
+     The count badge carries the colour so the strip can be scanned without reading labels. */
+  .nav{position:sticky;top:0;z-index:30;background:var(--surface);border-bottom:1px solid var(--line);padding:7px 40px;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+  .navchip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;line-height:1;letter-spacing:.01em;text-decoration:none;color:var(--slate);background:var(--surface);border:1px solid var(--line);border-left-width:3px;border-left-color:var(--line-strong);border-radius:6px;padding:4px 6px 4px 5px;transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease,color .12s ease}
+  .navchip .lbl{white-space:nowrap;font-weight:500}
+  .navchip .cnt{font-family:var(--mono);font-size:9.5px;font-weight:700;min-width:16px;height:14px;padding:0 4px;display:inline-flex;align-items:center;justify-content:center;border-radius:7px;background:var(--info-soft);color:var(--info);font-variant-numeric:tabular-nums}
+  .navchip:hover{transform:translateY(-1px);box-shadow:0 2px 7px rgba(16,21,28,.14)}
+  .navchip.sev-crit{border-left-color:var(--crit)}
+  .navchip.sev-crit .cnt{background:var(--crit);color:#fff}
+  .navchip.sev-crit:hover{border-color:var(--crit);color:var(--crit)}
+  .navchip.sev-warn{border-left-color:var(--warn)}
+  .navchip.sev-warn .cnt{background:var(--warn);color:#fff}
+  .navchip.sev-warn:hover{border-color:var(--warn);color:var(--warn)}
+  .navchip.sev-ok{border-left-color:var(--ok)}
+  .navchip.sev-ok .cnt{background:var(--ok-soft);color:var(--ok)}
+  .navchip.sev-ok:hover{border-color:var(--ok);color:var(--ok)}
+  .navchip.sev-info{border-left-color:var(--line-strong)}
+  .navchip.sev-unknown{border-left-color:var(--unknown);border-style:dashed;border-left-style:solid}
+  .navchip.sev-unknown .cnt{background:var(--unknown-soft);color:var(--unknown)}
+  .navchip.sev-unknown:hover{border-color:var(--unknown);color:var(--unknown)}
+  .navchip.plain{border-left-color:var(--accent);color:var(--accent);font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.06em;padding:5px 8px}
+  .navchip.plain:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .nav .spacer{margin-left:auto;display:flex;gap:5px}
+  @media (prefers-color-scheme: dark){
+    .navchip.sev-crit .cnt,.navchip.sev-warn .cnt{color:#12161b}
+    .navchip:hover{box-shadow:0 2px 7px rgba(0,0,0,.5)}
+  }
+
+  /* The navigation strip is sticky, so anchors need clearance or the heading lands under it. */
+  .finding,#summary,#plan{scroll-margin-top:78px}
+  .finding:target{border-color:var(--accent)}
+  .btn{font-size:11px;font-family:inherit;color:var(--slate);background:var(--surface);border:1px solid var(--line-strong);border-radius:5px;padding:4px 10px;cursor:pointer}
+  .btn:hover{color:var(--accent);border-color:var(--accent)}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 40px 20px}
+  .block-title{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:6px 0 13px}
+
+  .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:11px;margin-bottom:14px}
+  .tile{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:14px 15px 13px}
+  .tile::before{content:"";position:absolute;left:0;top:13px;bottom:13px;width:3px;border-radius:3px;background:var(--line-strong)}
+  .tile.sev-crit::before{background:var(--crit)} .tile.sev-warn::before{background:var(--warn)}
+  .tile.sev-ok::before{background:var(--ok)}     .tile.sev-info::before{background:var(--line-strong)}
+  .tile.sev-unknown::before{background:var(--unknown)}
+  .tile .num{font-size:27px;font-weight:700;line-height:1;padding-left:11px;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .tile.sev-crit .num{color:var(--crit)} .tile.sev-warn .num{color:var(--warn)} .tile.sev-ok .num{color:var(--ok)}
+  .tile.sev-unknown .num{color:var(--unknown)}
+  .tile .lbl{font-size:11.5px;color:var(--muted);margin-top:7px;padding-left:11px;line-height:1.35}
+
+  .note{font-size:12px;color:var(--muted);border-left:2px solid var(--line-strong);padding-left:11px;margin-top:6px}
+
+  .plan{background:var(--surface);border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:22px}
+  .plan table{width:100%;border-collapse:collapse;font-size:12.5px}
+  .plan td,.plan th{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+  .plan tbody tr:last-child td{border-bottom:none}
+  .plan .r{font-family:var(--mono);font-weight:700;color:var(--muted);white-space:nowrap}
+
+  .finding{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--line-strong);border-radius:9px;margin-bottom:14px;overflow:hidden}
+  .finding.sev-crit{border-left-color:var(--crit)} .finding.sev-warn{border-left-color:var(--warn)}
+  .finding.sev-ok{border-left-color:var(--ok)}     .finding.sev-info{border-left-color:var(--line-strong)}
+  .finding.sev-unknown{border-left-color:var(--unknown)}
+  .finding>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 20px;user-select:none}
+  .finding>summary::-webkit-details-marker{display:none}
+  .finding>summary::after{content:"";margin-left:auto;width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .2s;flex:none}
+  .finding[open]>summary::after{transform:rotate(-135deg)}
+  .finding .ref{font-family:var(--mono);font-size:11px;color:var(--muted);font-weight:700;min-width:32px}
+  .finding h2{font-size:15px;font-weight:600;flex:1}
+  .finding .body{padding:0 20px 20px;border-top:1px solid var(--line)}
+  .desc{font-size:12.5px;color:var(--slate);margin:14px 0;padding-left:12px;border-left:2px solid var(--accent-soft)}
+  .desc .tag-obs,.desc .tag-rem{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin-right:6px}
+  .desc p+p{margin-top:8px}
+  .srcref{font-size:11.5px;color:var(--muted);margin:0 0 12px 12px}
+
+  .chip{font-size:11px;font-weight:600;padding:3px 11px;border-radius:20px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .chip-crit{background:var(--crit-soft);color:var(--crit)}
+  .chip-warn{background:var(--warn-soft);color:var(--warn)}
+  .chip-ok{background:var(--ok-soft);color:var(--ok)}
+  .chip-info{background:var(--info-soft);color:var(--info)}
+  .chip-unknown{background:var(--unknown-soft);color:var(--unknown)}
+
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px}
+  .toolbar input{font-family:inherit;font-size:12px;color:var(--ink);background:var(--surface);border:1px solid var(--line-strong);border-radius:6px;padding:5px 10px;min-width:230px}
+  .toolbar .rowcount{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+  .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  caption{text-align:left;font-size:11px;color:var(--muted);padding:0 0 6px}
+  thead th{background:#eef1f4;color:var(--slate);text-align:left;font-weight:600;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;padding:9px 13px;border-bottom:1px solid var(--line-strong);white-space:nowrap}
+  table.sortable thead th{cursor:pointer}
+  table.sortable thead th::after{content:"";display:inline-block;width:0;height:0;margin-left:6px;vertical-align:middle;border-left:4px solid transparent;border-right:4px solid transparent;border-top:4px solid var(--line-strong)}
+  table.sortable thead th.asc::after{border-top:none;border-bottom:4px solid var(--accent)}
+  table.sortable thead th.desc::after{border-top:4px solid var(--accent)}
+  tbody td{padding:9px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:var(--accent-soft)}
+
+  .ok-note{font-size:12.5px;color:var(--ok);background:var(--ok-soft);border:1px solid var(--ok);border-radius:7px;padding:11px 14px;display:flex;gap:9px;align-items:center}
+  .ok-note::before{content:"\2713";font-weight:700}
+  .unknown-note{font-size:12.5px;color:var(--unknown);background:var(--unknown-soft);border:1px solid var(--line-strong);border-radius:7px;padding:11px 14px}
+
+  .foot{border-top:1px solid var(--line);padding:20px 40px;font-size:11.5px;color:var(--muted);text-align:center;line-height:1.7}
+  .foot strong{color:var(--slate)}
+
+  @media (max-width:640px){
+    .masthead,.posture,.nav,.wrap,.foot{padding-left:18px;padding-right:18px}
+    .masthead h1{font-size:21px} .legend{margin-left:0}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+  @page{size:A4;margin:14mm}
+  @media print{
+    body{background:#fff;color:#000;font-size:10.5px}
+    .nav,.toolbar,.btn{display:none!important}
+    .masthead{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .tile,.chip,thead th,.finding,.plan{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .finding{break-inside:avoid;box-shadow:none}
+    .finding>summary::after{display:none}
+    .finding .body{display:block!important}
+    tr{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div class="kicker">Group Policy Assessment &middot; Active Directory</div>
+  <h1>GPO Assessment Report</h1>
+  <div class="meta">
+<span>Client&nbsp;&nbsp;<b>Contoso Ltda.</b></span>
+<span>Domain&nbsp;&nbsp;<b>contoso.com</b></span>
+<span>Domain controller&nbsp;&nbsp;<b>dc01.contoso.com</b></span>
+<span>Collected by&nbsp;&nbsp;<b>CONTOSO\svc-assess</b></span>
+<span>Generated&nbsp;&nbsp;<b>2026-09-02 15:58:46 +00:00</b></span>
+<span>GPOs assessed&nbsp;&nbsp;<b>4</b></span>
+<span>Link scope&nbsp;&nbsp;<b>Domain (contoso.com)</b></span>
+<span>Script version&nbsp;&nbsp;<b>2.0.0</b></span>
+<span>Script SHA-256&nbsp;&nbsp;<b class='mono'>ABC123</b></span>
+<span>Assessor&nbsp;&nbsp;<b>A. Martins</b></span>
+  </div>
+</div>
+
+<div class="posture">
+  <div class="verdict sev-crit"><span class="dot"></span>Attention required - integrity or security findings present - assessment incomplete, 1 check(s) not assessed</div>
+  <div class="legend">
+    <span><i class="lg-risk"></i>Risk / integrity</span>
+    <span><i class="lg-hyg"></i>Hygiene / precedence</span>
+    <span><i class="lg-info"></i>Inventory</span>
+  </div>
+</div>
+
+<div class="nav">
+<a class="navchip plain" href="#summary">Summary</a>
+<a class="navchip plain" href="#plan">Plan</a>
+<a class='navchip sev-crit' href='#ms16072' title='R1 - GPOs without a read permission usable by the computer account (MS16-072)'><span class='lbl'>MS16-072</span><span class='cnt'>1</span></a>
+<a class='navchip sev-crit' href='#cpassword' title='R2 - Credentials stored in Group Policy Preferences (MS14-025)'><span class='lbl'>cpassword</span><span class='cnt'>1</span></a>
+<a class='navchip sev-crit' href='#delegation' title='R3 - Write delegation held by non-default principals'><span class='lbl'>Delegation</span><span class='cnt'>1</span></a>
+<a class='navchip sev-crit' href='#sids' title='R4 - Unresolved SIDs in the delegation of a GPO'><span class='lbl'>Unresolved SIDs</span><span class='cnt'>1</span></a>
+<a class='navchip sev-crit' href='#orphan-gpc' title='R5 - Orphaned Group Policy Container (no template in SYSVOL)'><span class='lbl'>Orphan GPC</span><span class='cnt'>1</span></a>
+<a class='navchip sev-crit' href='#orphan-gpt' title='R6 - Orphaned Group Policy Template (no container in Active Directory)'><span class='lbl'>Orphan GPT</span><span class='cnt'>1</span></a>
+<a class='navchip sev-crit' href='#version' title='R7 - Version mismatch between Active Directory and SYSVOL'><span class='lbl'>Versions</span><span class='cnt'>1</span></a>
+<a class='navchip sev-crit' href='#crossdomain' title='R8 - Links that cross a domain boundary'><span class='lbl'>Cross-domain</span><span class='cnt'>1</span></a>
+<a class='navchip sev-ok' href='#noapply' title='R9 - Enabled links on GPOs that no principal can apply'><span class='lbl'>No apply target</span><span class='cnt'>0</span></a>
+<a class='navchip sev-warn' href='#empty' title='H1 - GPOs with no configured settings'><span class='lbl'>Empty</span><span class='cnt'>1</span></a>
+<a class='navchip sev-ok' href='#unlinked' title='H2 - GPOs with settings but no link'><span class='lbl'>Unlinked</span><span class='cnt'>0</span></a>
+<a class='navchip sev-warn' href='#useronly' title='H3 - User Configuration only, with the Computer node still enabled'><span class='lbl'>User only</span><span class='cnt'>1</span></a>
+<a class='navchip sev-warn' href='#componly' title='H4 - Computer Configuration only, with the User node still enabled'><span class='lbl'>Computer only</span><span class='cnt'>2</span></a>
+<a class='navchip sev-warn' href='#alldisabled' title='H5 - GPOs with GPO Status set to All Settings Disabled'><span class='lbl'>All disabled</span><span class='cnt'>1</span></a>
+<a class='navchip sev-warn' href='#enforced' title='H6 - Links configured as Enforced'><span class='lbl'>Enforced</span><span class='cnt'>1</span></a>
+<a class='navchip sev-warn' href='#blockinherit' title='H7 - Containers with inheritance blocked'><span class='lbl'>Block inherit</span><span class='cnt'>1</span></a>
+<a class='navchip sev-warn' href='#stale' title='H8 - GPOs not modified in more than 730 days'><span class='lbl'>Stale</span><span class='cnt'>2</span></a>
+<a class='navchip sev-warn' href='#defaultgpo' title='H9 - Default GPOs configured beyond their recommended scope'><span class='lbl'>Default GPOs</span><span class='cnt'>1</span></a>
+<a class='navchip sev-warn' href='#loopback' title='H10 - GPOs enabling user Group Policy loopback processing'><span class='lbl'>Loopback</span><span class='cnt'>1</span></a>
+<a class='navchip sev-info' href='#links' title='I1 - Link map'><span class='lbl'>Link map</span><span class='cnt'>4</span></a>
+<a class='navchip sev-info' href='#wmi' title='I2 - GPOs with a WMI filter'><span class='lbl'>WMI filters</span><span class='cnt'>1</span></a>
+<a class='navchip sev-info' href='#disabled-links' title='I3 - Links with Link Enabled set to No'><span class='lbl'>Disabled links</span><span class='cnt'>1</span></a>
+<a class='navchip sev-unknown' href='#gpco' title='I4 - Members of Group Policy Creator Owners'><span class='lbl'>GPCO</span><span class='cnt'>?</span></a>
+<a class='navchip sev-info' href='#largegpt' title='I5 - Group Policy Templates larger than 25 MB'><span class='lbl'>Large templates</span><span class='cnt'>1</span></a>
+<a class="navchip sev-warn" href="#collection" title="C0 - Collection completeness"><span class="lbl">Collection</span><span class="cnt">1</span></a>
+<div class="spacer">
+  <button type="button" class="btn" id="expand-all">Expand all</button>
+  <button type="button" class="btn" id="collapse-all">Collapse all</button>
+</div>
+</div>
+
+<div class="wrap">
+
+<div id="summary">
+  <div class="block-title">Executive summary</div>
+  <div class="tiles"><div class='tile sev-info'><div class='num'>4</div><div class='lbl'>GPOs assessed</div></div>
+<div class='tile sev-crit'><div class='num'>1</div><div class='lbl'>R1 GPOs without a read permission usable by the computer account (MS16-072)</div></div>
+<div class='tile sev-crit'><div class='num'>1</div><div class='lbl'>R2 Credentials stored in Group Policy Preferences (MS14-025)</div></div>
+<div class='tile sev-crit'><div class='num'>1</div><div class='lbl'>R3 Write delegation held by non-default principals</div></div>
+<div class='tile sev-crit'><div class='num'>1</div><div class='lbl'>R4 Unresolved SIDs in the delegation of a GPO</div></div>
+<div class='tile sev-crit'><div class='num'>1</div><div class='lbl'>R5 Orphaned Group Policy Container (no template in SYSVOL)</div></div>
+<div class='tile sev-crit'><div class='num'>1</div><div class='lbl'>R6 Orphaned Group Policy Template (no container in Active Directory)</div></div>
+<div class='tile sev-crit'><div class='num'>1</div><div class='lbl'>R7 Version mismatch between Active Directory and SYSVOL</div></div>
+<div class='tile sev-crit'><div class='num'>1</div><div class='lbl'>R8 Links that cross a domain boundary</div></div>
+<div class='tile sev-ok'><div class='num'>0</div><div class='lbl'>R9 Enabled links on GPOs that no principal can apply</div></div>
+<div class='tile sev-warn'><div class='num'>1</div><div class='lbl'>H1 GPOs with no configured settings</div></div>
+<div class='tile sev-ok'><div class='num'>0</div><div class='lbl'>H2 GPOs with settings but no link</div></div>
+<div class='tile sev-warn'><div class='num'>1</div><div class='lbl'>H3 User Configuration only, with the Computer node still enabled</div></div>
+<div class='tile sev-warn'><div class='num'>2</div><div class='lbl'>H4 Computer Configuration only, with the User node still enabled</div></div>
+<div class='tile sev-warn'><div class='num'>1</div><div class='lbl'>H5 GPOs with GPO Status set to All Settings Disabled</div></div>
+<div class='tile sev-warn'><div class='num'>1</div><div class='lbl'>H6 Links configured as Enforced</div></div>
+<div class='tile sev-warn'><div class='num'>1</div><div class='lbl'>H7 Containers with inheritance blocked</div></div>
+<div class='tile sev-warn'><div class='num'>2</div><div class='lbl'>H8 GPOs not modified in more than 730 days</div></div>
+<div class='tile sev-warn'><div class='num'>1</div><div class='lbl'>H9 Default GPOs configured beyond their recommended scope</div></div>
+<div class='tile sev-warn'><div class='num'>1</div><div class='lbl'>H10 GPOs enabling user Group Policy loopback processing</div></div>
+<div class='tile sev-info'><div class='num'>4</div><div class='lbl'>I1 Link map</div></div>
+<div class='tile sev-info'><div class='num'>1</div><div class='lbl'>I2 GPOs with a WMI filter</div></div>
+<div class='tile sev-info'><div class='num'>1</div><div class='lbl'>I3 Links with Link Enabled set to No</div></div>
+<div class='tile sev-unknown'><div class='num'>?</div><div class='lbl'>I4 Members of Group Policy Creator Owners</div></div>
+<div class='tile sev-info'><div class='num'>1</div><div class='lbl'>I5 Group Policy Templates larger than 25 MB</div></div></div>
+  <p class="note">The classification into risk, hygiene and inventory is an editorial convention of this report used for prioritization. It does not correspond to any formal severity rating published by Microsoft. Each section separates the observation, which is a statement of the collected data, from the recommendation, which is an interpretation to be validated against the design of the environment. A tile showing "?" means the check did not run; see the collection section.</p>
+</div>
+
+<div id="plan">
+  <div class="block-title">Recommended actions</div>
+  <div class="plan">
+  <table>
+    <caption class="muted-txt">Findings with a non-zero count, ordered by class and volume.</caption>
+    <thead><tr><th scope="col">Ref</th><th scope="col">Finding</th><th scope="col">Count</th><th scope="col">Recommended action</th></tr></thead>
+    <tbody><tr>
+  <td class="r">R1</td>
+  <td><a href="#ms16072">GPOs without a read permission usable by the computer account (MS16-072)</a></td>
+  <td><span class="chip chip-crit">1</span></td>
+  <td>Grant read permission to Authenticated Users, or to Domain Computers when security filtering on user objects is required. Apply Group Policy is not needed for the computer account.</td>
+</tr><tr>
+  <td class="r">R2</td>
+  <td><a href="#cpassword">Credentials stored in Group Policy Preferences (MS14-025)</a></td>
+  <td><span class="chip chip-crit">1</span></td>
+  <td>Remove the affected preference items, rotate every credential they contained, and replace the mechanism with LAPS or a Group Managed Service Account as appropriate.</td>
+</tr><tr>
+  <td class="r">R3</td>
+  <td><a href="#delegation">Write delegation held by non-default principals</a></td>
+  <td><span class="chip chip-crit">1</span></td>
+  <td>Review each entry against the delegation model. Remove write delegation from any principal that does not require it, with priority on GPOs linked to Tier 0 containers.</td>
+</tr><tr>
+  <td class="r">R4</td>
+  <td><a href="#sids">Unresolved SIDs in the delegation of a GPO</a></td>
+  <td><span class="chip chip-crit">1</span></td>
+  <td>Confirm whether the principal was deleted. Remove the stale access control entries after confirming that the SID does not belong to a trusted domain that is temporarily unreachable.</td>
+</tr><tr>
+  <td class="r">R5</td>
+  <td><a href="#orphan-gpc">Orphaned Group Policy Container (no template in SYSVOL)</a></td>
+  <td><span class="chip chip-crit">1</span></td>
+  <td>Confirm the state on a second domain controller. If the divergence persists, delete the orphaned container through the Group Policy Management Console.</td>
+</tr><tr>
+  <td class="r">R6</td>
+  <td><a href="#orphan-gpt">Orphaned Group Policy Template (no container in Active Directory)</a></td>
+  <td><span class="chip chip-crit">1</span></td>
+  <td>Confirm the state on a second domain controller. If the divergence persists, remove the folder from SYSVOL after backing it up.</td>
+</tr><tr>
+  <td class="r">R7</td>
+  <td><a href="#version">Version mismatch between Active Directory and SYSVOL</a></td>
+  <td><span class="chip chip-crit">1</span></td>
+  <td>Investigate DFS Replication or FRS health for SYSVOL. Compare the values across all domain controllers before editing the affected GPOs.</td>
+</tr><tr>
+  <td class="r">R8</td>
+  <td><a href="#crossdomain">Links that cross a domain boundary</a></td>
+  <td><span class="chip chip-crit">1</span></td>
+  <td>Replicate the policy content into a GPO of the target domain and remove the cross-domain link, unless the design explicitly requires it.</td>
+</tr><tr>
+  <td class="r">H8</td>
+  <td><a href="#stale">GPOs not modified in more than 730 days</a></td>
+  <td><span class="chip chip-warn">2</span></td>
+  <td>Review the listed GPOs against the current baseline and record a review date.</td>
+</tr><tr>
+  <td class="r">H4</td>
+  <td><a href="#componly">Computer Configuration only, with the User node still enabled</a></td>
+  <td><span class="chip chip-warn">2</span></td>
+  <td>Set the GPO Status to User Settings Disabled.</td>
+</tr><tr>
+  <td class="r">H7</td>
+  <td><a href="#blockinherit">Containers with inheritance blocked</a></td>
+  <td><span class="chip chip-warn">1</span></td>
+  <td>Document each blocked container. Inheritance blocking combined with enforcement produces precedence that is difficult to reason about and should be minimized.</td>
+</tr><tr>
+  <td class="r">H6</td>
+  <td><a href="#enforced">Links configured as Enforced</a></td>
+  <td><span class="chip chip-warn">1</span></td>
+  <td>Document each enforced link, or remove enforcement where the precedence can be achieved through link order.</td>
+</tr><tr>
+  <td class="r">H1</td>
+  <td><a href="#empty">GPOs with no configured settings</a></td>
+  <td><span class="chip chip-warn">1</span></td>
+  <td>Confirm the GPO is not a documented placeholder, then back it up and delete it.</td>
+</tr><tr>
+  <td class="r">H3</td>
+  <td><a href="#useronly">User Configuration only, with the Computer node still enabled</a></td>
+  <td><span class="chip chip-warn">1</span></td>
+  <td>Set the GPO Status to Computer Settings Disabled to shorten policy processing.</td>
+</tr><tr>
+  <td class="r">H9</td>
+  <td><a href="#defaultgpo">Default GPOs configured beyond their recommended scope</a></td>
+  <td><span class="chip chip-warn">1</span></td>
+  <td>Move settings outside the recommended scope into dedicated GPOs, then restore the default GPOs to their intended content.</td>
+</tr><tr>
+  <td class="r">H5</td>
+  <td><a href="#alldisabled">GPOs with GPO Status set to All Settings Disabled</a></td>
+  <td><span class="chip chip-warn">1</span></td>
+  <td>Confirm that the deactivation is intentional and documented; otherwise re-enable it or remove the GPO.</td>
+</tr><tr>
+  <td class="r">H10</td>
+  <td><a href="#loopback">GPOs enabling user Group Policy loopback processing</a></td>
+  <td><span class="chip chip-warn">1</span></td>
+  <td>Confirm the mode is intentional and that the scope of the GPO is limited to the computers that require it.</td>
+</tr></tbody>
+  </table>
+</div>
+</div>
+
+<div class="block-title" style="margin-top:24px">Detailed findings</div>
+
+<details id="ms16072" class="finding sev-crit" open>
+  <summary><span class="ref">R1</span><h2>GPOs without a read permission usable by the computer account (MS16-072)</h2><span class='chip chip-crit'>1 finding</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>After MS16-072 / KB3163622, user Group Policy is retrieved in the security context of the computer. A GPO that grants read neither to Authenticated Users nor to Everyone, Domain Computers or Domain Controllers cannot be retrieved by the computer account, and its user settings may stop applying. This is a factual permission observation; whether the removal was intentional must be confirmed with the domain owner.</p>
+      <p><span class='tag-rem'>Recommendation</span>Grant read permission to Authenticated Users, or to Domain Computers when security filtering on user objects is required. Apply Group Policy is not needed for the computer account.</p>
+    </div>
+    <p class='srcref'>Reference: <a href='https://support.microsoft.com/en-us/topic/ms16-072-security-update-for-group-policy-june-14-2016-7570425d-d460-3003-b2ac-a464c874725d'>MS16-072 / KB3163622 (Microsoft Support)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-ms16072" placeholder="Filter rows" aria-label="Filter rows of t-ms16072">
+  <span class="rowcount" id="t-ms16072-count">1 / 1 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-ms16072">
+    <caption>R1 - GPOs without a read permission usable by the computer account (MS16-072)</caption>
+    <thead><tr><th scope='col'>GPOName</th><th scope='col'>GUID</th><th scope='col'>LinkCount</th><th scope='col'>GpoStatus</th><th scope='col'>ReadTrustees</th><th scope='col'>Impact</th></tr></thead>
+    <tbody><tr><td>User Drive Maps</td><td><code class='mono'>AAAAAAAA-0000-0000-0000-000000000003</code></td><td>1</td><td>AllSettingsEnabled</td><td>S-1-5-21-1-2-3-1200</td><td>User policy may fail to apply on domain-joined computers.</td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="cpassword" class="finding sev-crit" open>
+  <summary><span class="ref">R2</span><h2>Credentials stored in Group Policy Preferences (MS14-025)</h2><span class='chip chip-crit'>1 finding</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>Group Policy Preferences XML files containing a cpassword attribute were found in SYSVOL. The AES key protecting that attribute was published by Microsoft, so any principal able to read SYSVOL can recover the plaintext credential. The stored value is deliberately not reproduced in this report.</p>
+      <p><span class='tag-rem'>Recommendation</span>Remove the affected preference items, rotate every credential they contained, and replace the mechanism with LAPS or a Group Managed Service Account as appropriate.</p>
+    </div>
+    <p class='srcref'>Reference: <a href='https://support.microsoft.com/en-us/topic/ms14-025-vulnerability-in-group-policy-preferences-could-allow-elevation-of-privilege-may-13-2014-60734e15-af79-26ca-ea53-8cd617073c30'>MS14-025 / KB2962486 (Microsoft Support)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-cpassword" placeholder="Filter rows" aria-label="Filter rows of t-cpassword">
+  <span class="rowcount" id="t-cpassword-count">1 / 1 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-cpassword">
+    <caption>R2 - Credentials stored in Group Policy Preferences (MS14-025)</caption>
+    <thead><tr><th scope='col'>GPOName</th><th scope='col'>GUID</th><th scope='col'>PreferenceXml</th><th scope='col'>RelativePath</th><th scope='col'>Occurrences</th></tr></thead>
+    <tbody><tr><td>User Drive Maps</td><td><code class='mono'>AAAAAAAA-0000-0000-0000-000000000003</code></td><td>Drives.xml</td><td><code class='mono'>User\Preferences\Drives\Drives.xml</code></td><td>2</td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="delegation" class="finding sev-crit" open>
+  <summary><span class="ref">R3</span><h2>Write delegation held by non-default principals</h2><span class='chip chip-crit'>1 finding</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>GPOs on which Edit settings or Edit settings, delete, modify security is granted to a principal outside the default privileged set (SYSTEM, Administrators, Domain Admins, Enterprise Admins, Enterprise Domain Controllers, Creator Owner, Group Policy Creator Owners). Where Tier0Linked is Yes the GPO is linked to the domain root or to the Domain Controllers organizational unit, which makes the delegation a direct path to Tier 0. Whether each delegation is legitimate is a decision for the domain owner; this report only states that it is non-default.</p>
+      <p><span class='tag-rem'>Recommendation</span>Review each entry against the delegation model. Remove write delegation from any principal that does not require it, with priority on GPOs linked to Tier 0 containers.</p>
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/dn579255(v=ws.11)'>Securing Group Policy delegation (Microsoft Learn)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-delegation" placeholder="Filter rows" aria-label="Filter rows of t-delegation">
+  <span class="rowcount" id="t-delegation-count">1 / 1 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-delegation">
+    <caption>R3 - Write delegation held by non-default principals</caption>
+    <thead><tr><th scope='col'>GPOName</th><th scope='col'>GUID</th><th scope='col'>Tier0Linked</th><th scope='col'>Trustees</th><th scope='col'>LinkedTo</th></tr></thead>
+    <tbody><tr><td>Workstation Baseline</td><td><code class='mono'>AAAAAAAA-0000-0000-0000-000000000002</code></td><td>No</td><td>Helpdesk [GpoEdit]</td><td><code class='mono'>OU=Workstations,DC=contoso,DC=com</code></td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="sids" class="finding sev-crit" open>
+  <summary><span class="ref">R4</span><h2>Unresolved SIDs in the delegation of a GPO</h2><span class='chip chip-crit'>1 finding</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>Delegation entries whose trustee name could not be resolved and is displayed as a raw SID. The usual causes are a deleted principal or a trust that cannot currently be traversed.</p>
+      <p><span class='tag-rem'>Recommendation</span>Confirm whether the principal was deleted. Remove the stale access control entries after confirming that the SID does not belong to a trusted domain that is temporarily unreachable.</p>
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/powershell/module/grouppolicy/get-gppermission'>Get-GPPermission (Microsoft Learn)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-sids" placeholder="Filter rows" aria-label="Filter rows of t-sids">
+  <span class="rowcount" id="t-sids-count">1 / 1 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-sids">
+    <caption>R4 - Unresolved SIDs in the delegation of a GPO</caption>
+    <thead><tr><th scope='col'>GPOName</th><th scope='col'>GUID</th><th scope='col'>Unresolved</th></tr></thead>
+    <tbody><tr><td>User Drive Maps</td><td><code class='mono'>AAAAAAAA-0000-0000-0000-000000000003</code></td><td><code class='mono'>S-1-5-21-1-2-3-1200 [GpoRead]</code></td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="orphan-gpc" class="finding sev-crit" open>
+  <summary><span class="ref">R5</span><h2>Orphaned Group Policy Container (no template in SYSVOL)</h2><span class='chip chip-crit'>1 finding</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>A groupPolicyContainer object exists under CN=Policies,CN=System with no matching folder in SYSVOL. Both sides of this comparison were read from the same domain controller, so a divergence is not an artifact of DFS Namespace resolving SYSVOL to a different replica. It can still reflect replication that has not converged; confirm against a second domain controller before deleting anything.</p>
+      <p><span class='tag-rem'>Recommendation</span>Confirm the state on a second domain controller. If the divergence persists, delete the orphaned container through the Group Policy Management Console.</p>
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/hh831791(v=ws.11)'>Group Policy architecture (Microsoft Learn)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-orphan-gpc" placeholder="Filter rows" aria-label="Filter rows of t-orphan-gpc">
+  <span class="rowcount" id="t-orphan-gpc-count">1 / 1 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-orphan-gpc">
+    <caption>R5 - Orphaned Group Policy Container (no template in SYSVOL)</caption>
+    <thead><tr><th scope='col'>GUID</th><th scope='col'>GPOName</th><th scope='col'>WhenCreated</th><th scope='col'>WhenChanged</th><th scope='col'>Issue</th></tr></thead>
+    <tbody><tr><td><code class='mono'>AAAAAAAA-0000-0000-0000-000000000004</code></td><td>Abandoned Policy</td><td>09/02/2018 15:58:45</td><td>06/16/2018 15:58:45</td><td>Group Policy Container present in Active Directory with no Group Policy Template in SYSVOL.</td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="orphan-gpt" class="finding sev-crit" open>
+  <summary><span class="ref">R6</span><h2>Orphaned Group Policy Template (no container in Active Directory)</h2><span class='chip chip-crit'>1 finding</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>A GUID-named folder exists under the SYSVOL Policies path with no matching groupPolicyContainer object. Both sides of this comparison were read from the same domain controller, so a divergence is not an artifact of DFS Namespace resolving SYSVOL to a different replica. It can still reflect replication that has not converged; confirm against a second domain controller before deleting anything.</p>
+      <p><span class='tag-rem'>Recommendation</span>Confirm the state on a second domain controller. If the divergence persists, remove the folder from SYSVOL after backing it up.</p>
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/hh831791(v=ws.11)'>Group Policy architecture (Microsoft Learn)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-orphan-gpt" placeholder="Filter rows" aria-label="Filter rows of t-orphan-gpt">
+  <span class="rowcount" id="t-orphan-gpt-count">1 / 1 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-orphan-gpt">
+    <caption>R6 - Orphaned Group Policy Template (no container in Active Directory)</caption>
+    <thead><tr><th scope='col'>GUID</th><th scope='col'>GPOName</th><th scope='col'>Path</th><th scope='col'>Issue</th></tr></thead>
+    <tbody><tr><td><code class='mono'>AAAAAAAA-0000-0000-0000-00000000000F</code></td><td>(no Group Policy Container in Active Directory)</td><td><code class='mono'>\\dc01\SYSVOL\contoso.com\Policies\{AAAAAAAA-0000-0000-0000-00000000000F}</code></td><td>Group Policy Template present in SYSVOL with no Group Policy Container in Active Directory.</td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="version" class="finding sev-crit" open>
+  <summary><span class="ref">R7</span><h2>Version mismatch between Active Directory and SYSVOL</h2><span class='chip chip-crit'>1 finding</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>The version number recorded on the Group Policy Container does not match the version recorded in the Group Policy Template on the same domain controller. This is a direct indicator that SYSVOL replication has not converged or has failed for this policy.</p>
+      <p><span class='tag-rem'>Recommendation</span>Investigate DFS Replication or FRS health for SYSVOL. Compare the values across all domain controllers before editing the affected GPOs.</p>
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/troubleshoot/windows-server/group-policy/troubleshoot-missing-sysvol-and-netlogon-shares'>DFS Replication of SYSVOL (Microsoft Learn)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-version" placeholder="Filter rows" aria-label="Filter rows of t-version">
+  <span class="rowcount" id="t-version-count">1 / 1 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-version">
+    <caption>R7 - Version mismatch between Active Directory and SYSVOL</caption>
+    <thead><tr><th scope='col'>GPOName</th><th scope='col'>GUID</th><th scope='col'>ComputerAD</th><th scope='col'>ComputerSysvol</th><th scope='col'>UserAD</th><th scope='col'>UserSysvol</th><th scope='col'>ModificationTime</th></tr></thead>
+    <tbody><tr><td>Workstation Baseline</td><td><code class='mono'>AAAAAAAA-0000-0000-0000-000000000002</code></td><td>12</td><td>9</td><td>0</td><td>0</td><td>08/23/2026 15:58:45</td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="crossdomain" class="finding sev-crit" open>
+  <summary><span class="ref">R8</span><h2>Links that cross a domain boundary</h2><span class='chip chip-crit'>1 finding</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>A container is linked to a GPO hosted in a different domain. Cross-domain links add latency to policy processing, depend on an available trust path, and are not recommended outside specific scenarios. Only containers in contoso.com were enumerated. A link created in another domain that points to a GPO of this domain is NOT visible to this check; re-run with -IncludeForestDomains for full coverage.</p>
+      <p><span class='tag-rem'>Recommendation</span>Replicate the policy content into a GPO of the target domain and remove the cross-domain link, unless the design explicitly requires it.</p>
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/hh831791(v=ws.11)'>Linking GPOs (Microsoft Learn)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-crossdomain" placeholder="Filter rows" aria-label="Filter rows of t-crossdomain">
+  <span class="rowcount" id="t-crossdomain-count">1 / 1 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-crossdomain">
+    <caption>R8 - Links that cross a domain boundary</caption>
+    <thead><tr><th scope='col'>GPOName</th><th scope='col'>GUID</th><th scope='col'>GPODomain</th><th scope='col'>ContainerDN</th><th scope='col'>ContainerType</th><th scope='col'>LinkEnabled</th><th scope='col'>Enforced</th></tr></thead>
+    <tbody><tr><td>User Drive Maps</td><td><code class='mono'>AAAAAAAA-0000-0000-0000-000000000003</code></td><td><code class='mono'>DC=fabrikam,DC=com</code></td><td><code class='mono'>OU=Sales,DC=contoso,DC=com</code></td><td>OU</td><td>False</td><td>False</td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="noapply" class="finding sev-ok">
+  <summary><span class="ref">R9</span><h2>Enabled links on GPOs that no principal can apply</h2><span class='chip chip-ok'>0 findings</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>The GPO is linked with the link enabled and its settings are not fully disabled, but no principal holds the Apply Group Policy permission. The policy is therefore inert while appearing active in the console.</p>
+      <p><span class='tag-rem'>Recommendation</span>Either restore the intended security filtering or remove the link, so that the console reflects the effective configuration.</p>
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/hh831791(v=ws.11)'>Security filtering (Microsoft Learn)</a></p>
+    <p class='ok-note'>Every enabled link resolves to at least one principal that can apply the GPO.</p>
+  </div>
+</details>
+<details id="empty" class="finding sev-warn">
+  <summary><span class="ref">H1</span><h2>GPOs with no configured settings</h2><span class='chip chip-warn'>1 finding</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>No extension data is present in either Computer Configuration or User Configuration. Emptiness is determined from the extension data of the XML report. The container version numbers are shown alongside: a GPO whose settings were added and later removed keeps a version above zero, so the two indicators can legitimately disagree.</p>
+      <p><span class='tag-rem'>Recommendation</span>Confirm the GPO is not a documented placeholder, then back it up and delete it.</p>
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/powershell/module/grouppolicy/get-gpo'>Get-GPOReport (Microsoft Learn)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-empty" placeholder="Filter rows" aria-label="Filter rows of t-empty">
+  <span class="rowcount" id="t-empty-count">1 / 1 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-empty">
+    <caption>H1 - GPOs with no configured settings</caption>
+    <thead><tr><th scope='col'>GPOName</th><th scope='col'>GUID</th><th scope='col'>GpoStatus</th><th scope='col'>LinkCount</th><th scope='col'>ComputerVersion</th><th scope='col'>UserVersion</th><th scope='col'>CreationTime</th><th scope='col'>ModificationTime</th></tr></thead>
+    <tbody><tr><td>Abandoned Policy</td><td><code class='mono'>AAAAAAAA-0000-0000-0000-000000000004</code></td><td>AllSettingsDisabled</td><td>0</td><td>0</td><td>0</td><td>09/02/2021 15:58:45</td><td>06/16/2018 15:58:45</td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="unlinked" class="finding sev-ok">
+  <summary><span class="ref">H2</span><h2>GPOs with settings but no link</h2><span class='chip chip-ok'>0 findings</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>The GPO contains settings but is not linked to any domain, organizational unit or site within the enumerated scope. It has no effect on the environment but represents unfinished or abandoned configuration.</p>
+      <p><span class='tag-rem'>Recommendation</span>Link the GPO where it is required, or back it up and delete it.</p>
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/hh831791(v=ws.11)'>Linking GPOs (Microsoft Learn)</a></p>
+    <p class='ok-note'>Every GPO with settings is linked somewhere in the enumerated scope.</p>
+  </div>
+</details>
+<details id="useronly" class="finding sev-warn">
+  <summary><span class="ref">H3</span><h2>User Configuration only, with the Computer node still enabled</h2><span class='chip chip-warn'>1 finding</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>Settings exist only in User Configuration while the Computer Configuration section remains enabled, so clients evaluate a section that carries nothing.</p>
+      <p><span class='tag-rem'>Recommendation</span>Set the GPO Status to Computer Settings Disabled to shorten policy processing.</p>
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/powershell/module/grouppolicy/set-gpo'>Set-GPO GpoStatus (Microsoft Learn)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-useronly" placeholder="Filter rows" aria-label="Filter rows of t-useronly">
+  <span class="rowcount" id="t-useronly-count">1 / 1 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-useronly">
+    <caption>H3 - User Configuration only, with the Computer node still enabled</caption>
+    <thead><tr><th scope='col'>GPOName</th><th scope='col'>GUID</th><th scope='col'>GpoStatus</th><th scope='col'>Recommended</th></tr></thead>
+    <tbody><tr><td>User Drive Maps</td><td><code class='mono'>AAAAAAAA-0000-0000-0000-000000000003</code></td><td>AllSettingsEnabled</td><td>Set the GPO Status to Computer Settings Disabled.</td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="componly" class="finding sev-warn">
+  <summary><span class="ref">H4</span><h2>Computer Configuration only, with the User node still enabled</h2><span class='chip chip-warn'>2 findings</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>Settings exist only in Computer Configuration while the User Configuration section remains enabled.</p>
+      <p><span class='tag-rem'>Recommendation</span>Set the GPO Status to User Settings Disabled.</p>
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/powershell/module/grouppolicy/set-gpo'>Set-GPO GpoStatus (Microsoft Learn)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-componly" placeholder="Filter rows" aria-label="Filter rows of t-componly">
+  <span class="rowcount" id="t-componly-count">2 / 2 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-componly">
+    <caption>H4 - Computer Configuration only, with the User node still enabled</caption>
+    <thead><tr><th scope='col'>GPOName</th><th scope='col'>GUID</th><th scope='col'>GpoStatus</th><th scope='col'>Recommended</th></tr></thead>
+    <tbody><tr><td>Default Domain Policy</td><td><code class='mono'>31B2F340-016D-11D2-945F-00C04FB984F9</code></td><td>AllSettingsEnabled</td><td>Set the GPO Status to User Settings Disabled.</td></tr><tr><td>Workstation Baseline</td><td><code class='mono'>AAAAAAAA-0000-0000-0000-000000000002</code></td><td>AllSettingsEnabled</td><td>Set the GPO Status to User Settings Disabled.</td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="alldisabled" class="finding sev-warn">
+  <summary><span class="ref">H5</span><h2>GPOs with GPO Status set to All Settings Disabled</h2><span class='chip chip-warn'>1 finding</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>The GPO is completely inert even where it is linked.</p>
+      <p><span class='tag-rem'>Recommendation</span>Confirm that the deactivation is intentional and documented; otherwise re-enable it or remove the GPO.</p>
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/powershell/module/grouppolicy/set-gpo'>Set-GPO GpoStatus (Microsoft Learn)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-alldisabled" placeholder="Filter rows" aria-label="Filter rows of t-alldisabled">
+  <span class="rowcount" id="t-alldisabled-count">1 / 1 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-alldisabled">
+    <caption>H5 - GPOs with GPO Status set to All Settings Disabled</caption>
+    <thead><tr><th scope='col'>GPOName</th><th scope='col'>GUID</th><th scope='col'>LinkCount</th><th scope='col'>CreationTime</th><th scope='col'>ModificationTime</th></tr></thead>
+    <tbody><tr><td>Abandoned Policy</td><td><code class='mono'>AAAAAAAA-0000-0000-0000-000000000004</code></td><td>0</td><td>09/02/2021 15:58:45</td><td>06/16/2018 15:58:45</td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="enforced" class="finding sev-warn">
+  <summary><span class="ref">H6</span><h2>Links configured as Enforced</h2><span class='chip chip-warn'>1 finding</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>An enforced link overrides inheritance blocking and takes precedence over links applied closer to the object. Enforcement is a legitimate design choice; undocumented enforcement is a common source of unexplained precedence.</p>
+      <p><span class='tag-rem'>Recommendation</span>Document each enforced link, or remove enforcement where the precedence can be achieved through link order.</p>
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/hh831791(v=ws.11)'>Group Policy processing and precedence (Microsoft Learn)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-enforced" placeholder="Filter rows" aria-label="Filter rows of t-enforced">
+  <span class="rowcount" id="t-enforced-count">1 / 1 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-enforced">
+    <caption>H6 - Links configured as Enforced</caption>
+    <thead><tr><th scope='col'>GPOName</th><th scope='col'>GUID</th><th scope='col'>ContainerDN</th><th scope='col'>ContainerType</th><th scope='col'>LinkEnabled</th><th scope='col'>LinkOrder</th></tr></thead>
+    <tbody><tr><td>Default Domain Policy</td><td><code class='mono'>31B2F340-016D-11D2-945F-00C04FB984F9</code></td><td><code class='mono'>DC=contoso,DC=com</code></td><td>Domain</td><td>True</td><td>1</td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="blockinherit" class="finding sev-warn">
+  <summary><span class="ref">H7</span><h2>Containers with inheritance blocked</h2><span class='chip chip-warn'>1 finding</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>Block Inheritance is set on the container, so GPOs linked higher in the hierarchy do not apply unless their links are enforced. Together with the enforced links above, this determines the effective precedence of the environment.</p>
+      <p><span class='tag-rem'>Recommendation</span>Document each blocked container. Inheritance blocking combined with enforcement produces precedence that is difficult to reason about and should be minimized.</p>
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/hh831791(v=ws.11)'>Group Policy processing and precedence (Microsoft Learn)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-blockinherit" placeholder="Filter rows" aria-label="Filter rows of t-blockinherit">
+  <span class="rowcount" id="t-blockinherit-count">1 / 1 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-blockinherit">
+    <caption>H7 - Containers with inheritance blocked</caption>
+    <thead><tr><th scope='col'>ContainerDN</th><th scope='col'>ContainerType</th><th scope='col'>Domain</th></tr></thead>
+    <tbody><tr><td><code class='mono'>OU=Servers,DC=contoso,DC=com</code></td><td>OU</td><td>contoso.com</td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="stale" class="finding sev-warn">
+  <summary><span class="ref">H8</span><h2>GPOs not modified in more than 730 days</h2><span class='chip chip-warn'>2 findings</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>Age alone is not a defect: a stable policy is expected to be stable. The list exists to drive a review of whether the content still matches the current operating system estate and security baseline.</p>
+      <p><span class='tag-rem'>Recommendation</span>Review the listed GPOs against the current baseline and record a review date.</p>
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/powershell/module/grouppolicy/get-gpo'>Get-GPO (Microsoft Learn)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-stale" placeholder="Filter rows" aria-label="Filter rows of t-stale">
+  <span class="rowcount" id="t-stale-count">2 / 2 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-stale">
+    <caption>H8 - GPOs not modified in more than 730 days</caption>
+    <thead><tr><th scope='col'>GPOName</th><th scope='col'>GUID</th><th scope='col'>LinkCount</th><th scope='col'>ModificationTime</th><th scope='col'>DaysSinceChange</th></tr></thead>
+    <tbody><tr><td>Default Domain Policy</td><td><code class='mono'>31B2F340-016D-11D2-945F-00C04FB984F9</code></td><td>1</td><td>05/21/2023 15:58:45</td><td>1200</td></tr><tr><td>Abandoned Policy</td><td><code class='mono'>AAAAAAAA-0000-0000-0000-000000000004</code></td><td>0</td><td>06/16/2018 15:58:45</td><td>3000</td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="defaultgpo" class="finding sev-warn">
+  <summary><span class="ref">H9</span><h2>Default GPOs configured beyond their recommended scope</h2><span class='chip chip-warn'>1 finding</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>Microsoft guidance is to restrict the Default Domain Policy to account, password, lockout and Kerberos policy, and the Default Domain Controllers Policy to user rights assignment and audit policy, placing everything else in purpose-built GPOs. This check reports the client-side extensions present in those two GPOs; the contents of the Security extension itself still require manual review, so a listed GPO is a candidate for review rather than a confirmed deviation.</p>
+      <p><span class='tag-rem'>Recommendation</span>Move settings outside the recommended scope into dedicated GPOs, then restore the default GPOs to their intended content.</p>
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/troubleshoot/windows-server/group-policy/create-and-manage-central-store'>Default GPO recommendations (Microsoft Learn)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-defaultgpo" placeholder="Filter rows" aria-label="Filter rows of t-defaultgpo">
+  <span class="rowcount" id="t-defaultgpo-count">1 / 1 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-defaultgpo">
+    <caption>H9 - Default GPOs configured beyond their recommended scope</caption>
+    <thead><tr><th scope='col'>GPOName</th><th scope='col'>GUID</th><th scope='col'>ComputerExtensions</th><th scope='col'>UserExtensions</th><th scope='col'>Unexpected</th></tr></thead>
+    <tbody><tr><td>Default Domain Policy</td><td><code class='mono'>31B2F340-016D-11D2-945F-00C04FB984F9</code></td><td>Registry, Security</td><td></td><td>Registry</td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="loopback" class="finding sev-warn">
+  <summary><span class="ref">H10</span><h2>GPOs enabling user Group Policy loopback processing</h2><span class='chip chip-warn'>1 finding</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>Loopback processing changes which user settings apply on the computers in scope. Replace discards the user-linked settings entirely; Merge applies them first and lets the loopback GPO override. The mode is read directly from the Registry.pol file of the template, which makes the detection independent of the console language.</p>
+      <p><span class='tag-rem'>Recommendation</span>Confirm the mode is intentional and that the scope of the GPO is limited to the computers that require it.</p>
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/troubleshoot/windows-server/group-policy/loopback-processing-of-group-policy'>Loopback processing of Group Policy (Microsoft Support)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-loopback" placeholder="Filter rows" aria-label="Filter rows of t-loopback">
+  <span class="rowcount" id="t-loopback-count">1 / 1 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-loopback">
+    <caption>H10 - GPOs enabling user Group Policy loopback processing</caption>
+    <thead><tr><th scope='col'>GPOName</th><th scope='col'>GUID</th><th scope='col'>Mode</th><th scope='col'>LinkedTo</th></tr></thead>
+    <tbody><tr><td>Workstation Baseline</td><td><code class='mono'>AAAAAAAA-0000-0000-0000-000000000002</code></td><td>Replace</td><td><code class='mono'>OU=Workstations,DC=contoso,DC=com</code></td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="links" class="finding sev-info">
+  <summary><span class="ref">I1</span><h2>Link map</h2><span class='chip chip-info'>4</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>Where every GPO is applied, with the enforced and disabled state of each link. Link order is derived from the position of the entry in the gPLink attribute, where the last entry corresponds to link order 1 in the console.</p>
+      
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/windows/win32/adschema/a-gplink'>gPLink attribute (Microsoft Learn)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-links" placeholder="Filter rows" aria-label="Filter rows of t-links">
+  <span class="rowcount" id="t-links-count">4 / 4 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-links">
+    <caption>I1 - Link map</caption>
+    <thead><tr><th scope='col'>GPOName</th><th scope='col'>GUID</th><th scope='col'>GpoStatus</th><th scope='col'>LinkCount</th><th scope='col'>LinkedTo</th></tr></thead>
+    <tbody><tr><td>Default Domain Policy</td><td><code class='mono'>31B2F340-016D-11D2-945F-00C04FB984F9</code></td><td>AllSettingsEnabled</td><td>1</td><td><code class='mono'>DC=contoso,DC=com [ENFORCED]</code></td></tr><tr><td>Workstation Baseline</td><td><code class='mono'>AAAAAAAA-0000-0000-0000-000000000002</code></td><td>AllSettingsEnabled</td><td>1</td><td><code class='mono'>OU=Workstations,DC=contoso,DC=com</code></td></tr><tr><td>User Drive Maps</td><td><code class='mono'>AAAAAAAA-0000-0000-0000-000000000003</code></td><td>AllSettingsEnabled</td><td>1</td><td><code class='mono'>OU=Sales,DC=contoso,DC=com [DISABLED]</code></td></tr><tr><td>Abandoned Policy</td><td><code class='mono'>AAAAAAAA-0000-0000-0000-000000000004</code></td><td>AllSettingsDisabled</td><td>0</td><td><code class='mono'>(not linked)</code></td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="wmi" class="finding sev-info">
+  <summary><span class="ref">I2</span><h2>GPOs with a WMI filter</h2><span class='chip chip-info'>1</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>A WMI filter is evaluated on every client at every policy refresh, so each filter adds processing cost. Filters should be documented and periodically revalidated against the operating system estate.</p>
+      
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2003/cc779036(v=ws.10)'>WMI filtering (Microsoft Learn)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-wmi" placeholder="Filter rows" aria-label="Filter rows of t-wmi">
+  <span class="rowcount" id="t-wmi-count">1 / 1 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-wmi">
+    <caption>I2 - GPOs with a WMI filter</caption>
+    <thead><tr><th scope='col'>GPOName</th><th scope='col'>GUID</th><th scope='col'>WMIFilterName</th><th scope='col'>Description</th></tr></thead>
+    <tbody><tr><td>Workstation Baseline</td><td><code class='mono'>AAAAAAAA-0000-0000-0000-000000000002</code></td><td>Win11</td><td>OS filter</td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="disabled-links" class="finding sev-info">
+  <summary><span class="ref">I3</span><h2>Links with Link Enabled set to No</h2><span class='chip chip-info'>1</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>The GPO is linked to the container but the link is not processed.</p>
+      
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/windows/win32/adschema/a-gplink'>gPLink attribute (Microsoft Learn)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-disabled-links" placeholder="Filter rows" aria-label="Filter rows of t-disabled-links">
+  <span class="rowcount" id="t-disabled-links-count">1 / 1 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-disabled-links">
+    <caption>I3 - Links with Link Enabled set to No</caption>
+    <thead><tr><th scope='col'>GPOName</th><th scope='col'>GUID</th><th scope='col'>ContainerDN</th><th scope='col'>ContainerType</th><th scope='col'>Enforced</th></tr></thead>
+    <tbody><tr><td>User Drive Maps</td><td><code class='mono'>AAAAAAAA-0000-0000-0000-000000000003</code></td><td><code class='mono'>OU=Sales,DC=contoso,DC=com</code></td><td>OU</td><td>False</td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+<details id="gpco" class="finding sev-unknown" open>
+  <summary><span class="ref">I4</span><h2>Members of Group Policy Creator Owners</h2><span class='chip chip-unknown'>not assessed</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>Members of this group can create GPOs in the domain and hold full control over the GPOs they create. The group is resolved by its well-known relative identifier (RID 520) rather than by display name, so the check works on domains installed in any language.</p>
+      
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/understand-security-identifiers'>Well-known security identifiers (Microsoft Learn)</a></p>
+    <p class='unknown-note'>The group could not be read. The result of this check is unknown and must not be read as compliance.</p>
+  </div>
+</details>
+<details id="largegpt" class="finding sev-info">
+  <summary><span class="ref">I5</span><h2>Group Policy Templates larger than 25 MB</h2><span class='chip chip-info'>1</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>Large templates increase SYSVOL replication volume and can extend logon time when the content is downloaded by clients. Scripts and installation payloads stored inside a template are the usual cause.</p>
+      
+    </div>
+    <p class='srcref'>Reference: <a href='https://learn.microsoft.com/en-us/troubleshoot/windows-server/group-policy/troubleshoot-missing-sysvol-and-netlogon-shares'>DFS Replication of SYSVOL (Microsoft Learn)</a></p>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-largegpt" placeholder="Filter rows" aria-label="Filter rows of t-largegpt">
+  <span class="rowcount" id="t-largegpt-count">1 / 1 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-largegpt">
+    <caption>I5 - Group Policy Templates larger than 25 MB</caption>
+    <thead><tr><th scope='col'>GPOName</th><th scope='col'>GUID</th><th scope='col'>SizeMB</th><th scope='col'>Files</th><th scope='col'>Path</th></tr></thead>
+    <tbody><tr><td>Workstation Baseline</td><td><code class='mono'>AAAAAAAA-0000-0000-0000-000000000002</code></td><td>41.7</td><td>320</td><td><code class='mono'>\\dc01\SYSVOL\contoso.com\Policies\{AAAAAAAA-0000-0000-0000-000000000002}</code></td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+
+<details id="collection" class="finding sev-warn">
+  <summary><span class="ref">C0</span><h2>Collection completeness</h2><span class="chip chip-warn">1</span></summary>
+  <div class="body">
+    <div class="desc">
+      <p><span class="tag-obs">Observation</span>Steps that failed while collecting data. Any check that depended on a failed step is marked as not assessed and its result is unknown rather than compliant.</p>
+    </div>
+    <div class="toolbar">
+  <input class="tfilter" type="search" data-target="t-collection" placeholder="Filter rows" aria-label="Filter rows of t-collection">
+  <span class="rowcount" id="t-collection-count">1 / 1 rows</span>
+</div><div class="table-wrap">
+  <table class="sortable" id="t-collection">
+    <caption>Steps that failed during collection</caption>
+    <thead><tr><th scope='col'>Stage</th><th scope='col'>Target</th><th scope='col'>Reason</th><th scope='col'>Impact</th></tr></thead>
+    <tbody><tr><td>Group Policy Creator Owners</td><td>S-1-5-21-1-2-3-520</td><td>offline test harness</td><td>Membership of the group is missing from the report.</td></tr></tbody>
+  </table>
+</div>
+  </div>
+</details>
+
+</div>
+
+<div class="foot">
+  <strong>GPO Assessment Report</strong> &nbsp;&middot;&nbsp; contoso.com &nbsp;&middot;&nbsp; 2026-09-02 15:58:46 +00:00<br>
+  Read-only assessment. No Active Directory or SYSVOL object was created, modified or deleted.<br>
+  Provided AS IS, without warranty and without support.
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var sections = Array.prototype.slice.call(document.querySelectorAll('details.finding'));
+
+  function setAll(state) { sections.forEach(function (d) { d.open = state; }); }
+  var expandBtn = document.getElementById('expand-all');
+  var collapseBtn = document.getElementById('collapse-all');
+  if (expandBtn) { expandBtn.addEventListener('click', function () { setAll(true); }); }
+  if (collapseBtn) { collapseBtn.addEventListener('click', function () { setAll(false); }); }
+
+  Array.prototype.slice.call(document.querySelectorAll('input.tfilter')).forEach(function (input) {
+    input.addEventListener('input', function () {
+      var term = input.value.toLowerCase();
+      var table = document.getElementById(input.getAttribute('data-target'));
+      if (!table) { return; }
+      var rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
+      var shown = 0;
+      rows.forEach(function (row) {
+        var hit = row.textContent.toLowerCase().indexOf(term) !== -1;
+        row.style.display = hit ? '' : 'none';
+        if (hit) { shown += 1; }
+      });
+      var counter = document.getElementById(input.getAttribute('data-target') + '-count');
+      if (counter) { counter.textContent = shown + ' / ' + rows.length + ' rows'; }
+    });
+  });
+
+  function cellValue(row, index) {
+    var cell = row.cells[index];
+    return cell ? cell.textContent.trim() : '';
+  }
+
+  function compare(a, b, index, numeric) {
+    var x = cellValue(a, index);
+    var y = cellValue(b, index);
+    if (numeric) { return parseFloat(x.replace(/[^0-9.\-]/g, '') || '0') - parseFloat(y.replace(/[^0-9.\-]/g, '') || '0'); }
+    return x.localeCompare(y, undefined, { numeric: true, sensitivity: 'base' });
+  }
+
+  Array.prototype.slice.call(document.querySelectorAll('table.sortable')).forEach(function (table) {
+    var headers = Array.prototype.slice.call(table.querySelectorAll('thead th'));
+    headers.forEach(function (th, index) {
+      th.setAttribute('tabindex', '0');
+      function run() {
+        var body = table.tBodies[0];
+        if (!body) { return; }
+        var rows = Array.prototype.slice.call(body.rows);
+        var descending = th.classList.contains('asc');
+        var numeric = rows.every(function (r) {
+          var v = cellValue(r, index).replace(/[^0-9.\-]/g, '');
+          return v.length > 0 && !isNaN(parseFloat(v));
+        });
+        rows.sort(function (a, b) { return descending ? compare(b, a, index, numeric) : compare(a, b, index, numeric); });
+        headers.forEach(function (h) { h.classList.remove('asc', 'desc'); });
+        th.classList.add(descending ? 'desc' : 'asc');
+        rows.forEach(function (r) { body.appendChild(r); });
+      }
+      th.addEventListener('click', run);
+      th.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); run(); } });
+    });
+  });
+});
+</script>
+</body>
+</html>
